@@ -1,16 +1,39 @@
 <!DOCTYPE html> 
 <html>
     <head>
-        <title>Home of BillaBee</title>
+        <title>Hive of BillaBee</title>
         <link rel="stylesheet" href="style.css">
+        <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;700&family=Patrick+Hand&display=swap" rel="stylesheet">
     </head>
 
     <body>
-        <header>BillaBee - Calendar Assistent</header>
-        <main>
-            <a href="https://calendar.google.com/">Go to Google Calendar</a>
-        </main>
+        <header>
+            <div class="bee-icon">🐝</div>
+            <h1>Hive of BillaBee</h1>
+            <div class="bee-icon">🐝</div>
+        </header>
         
+        <div class="welcome-message">
+            <h2>🍯 Hey honey, ready for a productive day? 🍯</h2>
+        </div>   
+        
+        <main>
+            <form action="/search" method="GET" class="search-container">
+                <input type="search" id="search" name="q" placeholder="What do you need to get done today?">
+                <button type="submit">Let's get buzzzy! 🐝</button>
+            </form>
+            
+            <div class="calendar-link">
+                <a href="https://calendar.google.com/" class="honey-button">
+                    🐝 Fly to your Honeycomb Calendar 🐝
+                </a>
+            </div>
+            
+            <div class="bee-wisdom">
+                <p>Remember: Just like bees in a hive, every small task contributes to something sweet!</p>
+                <p>Bee productive, but don't forget to stop and smell the flowers! 🍯🌸</p>
+            </div>
+        </main>
     </body>
 </html>
 
