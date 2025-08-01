@@ -40,17 +40,27 @@ header {
 
 h2 {
   color: #c06f18;
-  font-size: 3.5rem;
+  font-size: 4.5rem;
   text-align: center;
-  margin: 8;
+  margin: 4;
   font-family: 'Montserrat', serif;
   font-weight: 700;
   letter-spacing: 0.5px;
-  padding:40px;
+  padding-top:30px;
+}
+
+h3 {
+  color: #c06f18;
+  font-size: 3.2rem;
+  text-align: center;
+  margin: 2;
+  font-family: 'Montserrat', serif;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
 main {
-  padding: 20px;
+  padding: 10px;
   max-width: 900px;
   margin: 0 auto;
 }
