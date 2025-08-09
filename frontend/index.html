@@ -1,40 +1,62 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html>
     <head>
         <title>Hive of BillaBee</title>
         <link rel="stylesheet" href="style.css">
-        <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;700&family=Patrick+Hand&display=swap" rel="stylesheet">
+        <!-- Removed the unused "Patrick Hand" font for slightly faster loading -->
+        <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;700&display=swap" rel="stylesheet">
     </head>
-
     <body>
         <header>
             <div class="bee-icon">🐝</div>
             <h1>Hive of BillaBee</h1>
             <div class="bee-icon">🐝</div>
         </header>
-        
-        <div class="welcome-message">
-            <h2> Hey honey🍯 </h2>
-            <h3> Ready for a productive day? </h3>
-        </div>   
-        
+
+        <!-- Main content area -->
         <main>
-            <form action="/search" method="GET" class="search-container">
-                <input type="search" id="search" name="q" placeholder="What do you need to get done today?">
-                <button type="submit">Let's get buzzzy! 🐝</button>
-            </form>
-            
-            <div class="calendar-link">
-                <a href="https://calendar.google.com/" class="honey-button">
-                    🐝 Fly to your Honeycomb Calendar 🐝
-                </a>
+            <!-- This section is visible on page load -->
+            <div class="welcome-section" id="welcome-section">
+                <div class="welcome-message">
+                    <h2>Hey honey🍯</h2>
+                    <h3>Ready for a productive day?</h3>
+                </div>
+                
+                <!-- The form MUST have id="search-form" -->
+                <form class="search-container" id="search-form">
+                    <!-- The input MUST have id="search" -->
+                    <input type="search" id="search" name="q" placeholder="What do you need to get done today?">
+                    <button type="submit">Let's get buzzzy! 🐝</button>
+                </form>
+                
+                <div class="calendar-link">
+                    <a href="https://calendar.google.com/" class="honey-button">
+                        🐝 Fly to your Honeycomb Calendar 🐝
+                    </a>
+                </div>
+                
+                <div class="bee-wisdom">
+                    <p>Remember: Just like bees in a hive, every small task contributes to something sweet!</p>
+                    <p>Bee productive, but don't forget to stop and smell the flowers! 🍯🌸</p>
+                </div>
             </div>
-            
-            <div class="bee-wisdom">
-                <p>Remember: Just like bees in a hive, every small task contributes to something sweet!</p>
-                <p>Bee productive, but don't forget to stop and smell the flowers! 🍯🌸</p>
+
+            <!-- This is the chat view, which MUST have id="chat-container" -->
+            <div class="chat-container" id="chat-container">
+                <div class="chat-box" id="chat-box">
+                    <!-- Messages will appear here -->
+                </div>
+                <div class="input-area">
+                    <input type="text" id="chat-input" placeholder="Type your message to Billa the Bee...">
+                    <button id="chat-send">Buzz! 🐝</button>
+                </div>
             </div>
         </main>
+        
+        <footer>
+            <p>Hive of BillaBee &copy; 2025 | Buzz Your Way to Productivity</p>
+        </footer>
+
+        <script src="script.js"></script>
     </body>
 </html>
-
