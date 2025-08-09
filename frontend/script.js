@@ -76,26 +76,34 @@ document.addEventListener('DOMContentLoaded', function() {
     /**
      * Handles what happens when the user sends a message from within the chat.
      */
-    function handleChatSendMessage() {
+    async function handleChatSendMessage() {
         const message = chatInput.value.trim();
-        if (message) {
-            addMessage(message, 'user');
-            chatInput.value = '';
-            showTyping();
+        if (!message) return; 
+
+        addMessage(message, 'user');
+        chatInput.value = '';
+        showTyping();
+
+        const response = await fetch('http://127.0.0.1:5000/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: message })
+        });
+
+            const data = await response.json();
 
             setTimeout(() => {
                 removeTyping();
-                const botResponse = "That's a great point! Let's keep this buzz going. 🐝";
-                addMessage(botResponse, 'bot');
+                addMessage(data.response, 'bot');
             }, 1000);
         }
-    }
+
 
     // --- Event Listeners ---
 
     // STARTING the chat from the welcome screen.
     searchForm.addEventListener('submit', function(event) {
-        event.preventDefault(); // Stop page reload
+        event.preventDefault(); 
 
         const initialQuery = searchInput.value.trim();
 
@@ -107,11 +115,19 @@ document.addEventListener('DOMContentLoaded', function() {
             addMessage(initialQuery, 'user');
             showTyping();
 
-            setTimeout(() => {
+            async function fetchInitialResponse() {
+                const response = await fetch('http://127.0.0.1:5000/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: initialQuery })     
+                });
+                
+                const data = await response.json();
                 removeTyping();
-                const botResponse = "Welcome to BillaBee! How can I assist you today?";
-                addMessage(botResponse, 'bot');
-            }, 1000);
+                addMessage(data.response, 'bot');
+            }
+            
+            fetchInitialResponse();
         }
     });
 
