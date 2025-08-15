@@ -186,6 +186,28 @@ font-weight: 600;
   border-radius: 30px;
   cursor: pointer;
   font-size: 1.1rem;
+  margin-left: 10px;
+}
+
+#chat-send:hover {
+  background: #ffc04d;
+  transform: translateY(-1px);
+}
+
+#confirm-button {
+  padding: 14px 20px;
+  background: #c06f18;
+  color: #1a1a1a;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  margin-left: 10px;
+}
+
+#confirm-button:hover {
+  background: #ffc04d;
+  transform: translateY(-1px);
 }
 
 /* MESSAGE BUBBLE STYLES */
