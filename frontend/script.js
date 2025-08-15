@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const chatBox = document.getElementById('chat-box');
     const chatInput = document.getElementById('chat-input');
     const chatSend = document.getElementById('chat-send');
+    const confirmButton = document.getElementById('confirm-button');
     
     /**
      * Creates and adds a message bubble to the chat box.
@@ -124,14 +125,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 const data = await response.json();
                 removeTyping();
-                addMessage(data.response, 'bot');
+
+                if (data.events) {
+                    data.events.forEach(event => {
+                        addMessage('Event: ${event.summary} at ${event.start} - ${event.end}', 'bot');
+                    });
+                } else {
+                    addMessage(data.response, 'bot');
+                }
             }
-            
             fetchInitialResponse();
         }
     });
 
-    // Event listener for the "Buzz!" button inside the chat
+    // Event listener for the "Buzz!" button inside the chats
     chatSend.addEventListener('click', handleChatSendMessage);
 
     // Event listener for pressing "Enter" inside the chat
@@ -140,4 +147,15 @@ document.addEventListener('DOMContentLoaded', function() {
             handleChatSendMessage();
         }
     });
+
+    // Event listener for the "Flying!" button
+    confirmButton.addEventListener('click', async () => {
+        await fethc ("/api(create_event", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(event)
+        });
+        confirmButton.disabled = true; // Disable the button after confirmation
+        addMessage("Flying! 🐝", 'user');
+    }); 
 });
