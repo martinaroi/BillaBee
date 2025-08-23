@@ -4,6 +4,8 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 import datetime 
 from googleapiclient.errors import HttpError
+from typing import Any
+
 
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 
@@ -28,21 +30,20 @@ class GoogleCalendarService:
         print('Google Calendar Service successfully initialized.')
 
 
-    def insert_event(self, summary, description, start_time, end_time, timezone):
-        event_body = {
-            'summary': summary,
-            'description': description,
-            'start': {
-                'dateTime': start_time.isoformat(),
-                'timeZone': timezone,
-            },
-            'end': {
-                'dateTime': end_time.isoformat(),
-                'timeZone': timezone,
-            },
-        }
+    def insert_event(self, event_body: dict[str, Any]):
+        """
+        Inserts an event into the primary calendar using a pre-validated dictionary.
+        """
+
         try: 
+            if 'start' in event_body and 'dateTime' in event_body['start']:
+                event_body['start']['dateTime'] = event_body['start']['dateTime'].isoformat()
+        
+            if 'end' in event_body and 'dateTime' in event_body['end']:
+                event_body['end']['dateTime'] = event_body['end']['dateTime'].isoformat()
+            
             created_event = self.service.events().insert(calendarId='primary', body=event_body).execute()
+
             print(f"Event created: {created_event.get('htmlLink')}")
             return created_event
         except HttpError as error:
