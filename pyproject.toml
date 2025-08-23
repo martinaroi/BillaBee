@@ -7,8 +7,20 @@ authors = [
 ]
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = [
-]
+
+[tool.poetry.dependencies]
+python = ">=3.12"
+google-api-python-client = ">=2.178.0"
+google-auth-oauthlib = ">=1.2.2"
+google-auth-httplib2 = ">=0.2.0"
+flask = ">=3.1.1,<4.0.0"
+pydantic = ">=2.11.7,<3.0.0"
+openai = ">=1.99.5,<2.0.0"
+python-dotenv = ">=1.1.1,<2.0.0"
+flask-cors = {version = ">=6.0.1,<7.0.0", python = ">=3.12,<4.0"}
+uritemplate = ">=4.2.0,<5.0.0"
+pip = ">=25.2,<26.0"
+
 
 [tool.poetry]
 packages = [{include = "billabee", from = "src"}]
