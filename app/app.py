@@ -7,11 +7,11 @@ import json
 from datetime import datetime
 from pathlib import Path
 import re
-from .calendar_service import *
-from .models import *
+from calendar_service import *
+from models import *
 from pydantic import ValidationError
-from .context import *
-from .action import *
+from context import *
+from action import *
 
 # Load environment variables from .env file
 script_dir = Path(__file__).parent
@@ -42,9 +42,8 @@ def get_ai_response(user_message):
         {
           "summary": "<short title>",
           "description": "<optional details>",
-          "start": "<ISO 8601 datetime>",
-          "end": "<ISO 8601 datetime>",
-          "timezone": "<valid timezone name>"
+          "start": { "dateTime": "<ISO 8601 datetime>", "timeZone": "<valid timezone name>" },
+          "end": { "dateTime": "<ISO 8601 datetime>", "timeZone": "<valid timezone name>" }
         }
         ]
     }
@@ -102,36 +101,51 @@ def chat_api():
     
 @app.route('/api/create_event', methods=['POST'])
 def create_event_api():
-    """
-    Handles creating a calendar event using our robust MCP pattern.
-    This route replaces your old create_event_endpoint function.
-    """
-
+    # Safety checks remain the same
     if not app_context.calendar_service:
-        return jsonify({"status": "error", "message": "Server is not configured to connect to Google Calendar."}), 503
+        return jsonify({"status": "error", "message": "Server not configured."}), 503
+
+    data = request.json
+    if not data or not isinstance(data, dict):
+        return jsonify({"status": "error", "message": "Invalid JSON body."}), 400
 
     try:
-        # Ensure request.json is a dict with string keys and all required fields are present
-        data = dict(request.json or {})
-        required_fields = ["summary", "start", "end", "attendees", "recurrence", "reminders"]
-        missing_fields = [field for field in required_fields if field not in data]
-        if missing_fields:
-            return jsonify({"status": "error", "message": f"Missing required fields: {', '.join(missing_fields)}"}), 400
-
+        # 1. Validate the incoming request (This works)
         event_model = EventCreateRequest(**data)
+        
+        # 2. Perform the action (This works, and the event is created)
+        created_event_dict = create_event_action(app_context, event_model)
 
-        created_event = create_event_action(app_context, event_model)
+        # 3. --- THIS IS THE GUARANTEED FIX ---
+        # Instead of trying to sanitize the whole Google object, we build a new,
+        # simple dictionary with only the safe data we need.
+        
+        simple_response_event = {
+            "summary": created_event_dict.get("summary"),
+            "description": created_event_dict.get("description"),
+            "htmlLink": created_event_dict.get("htmlLink"),
+            
+            # The 'start' and 'end' objects from the API response contain
+            # simple strings, which are safe for JSON.
+            "start": created_event_dict.get("start"),
+            "end": created_event_dict.get("end")
+        }
 
-        return jsonify({"status": "success", "event": created_event}), 201
+        # 4. We pass this new, simple, guaranteed-safe dictionary to jsonify.
+        return jsonify({"status": "success", "event": simple_response_event}), 201
 
     except ValidationError as e:
-        return jsonify({"status": "error", "message": "Invalid data provided", "details": e.errors()}), 400 
-    
-    except ValueError as e:
-        return jsonify({"status": "error", "message": str(e)}), 400
+        # This error handling is correct
+        print(f"!!! PYDANTIC VALIDATION ERROR !!!\n{e.json()}\n!!! END OF ERROR !!!")
+        return jsonify({
+            "status": "error", 
+            "message": "Invalid data provided", 
+            "details": e.errors()
+        }), 400
     
     except Exception as e:
-        print(f"An unexpected error occurred during event creation: {e}")
+        # This error handling is correct
+        print(f"!!! AN UNEXPECTED ERROR OCCURRED: {e} !!!")
         return jsonify({"status": "error", "message": "An internal server error occurred."}), 500
 
 @app.route('/')
