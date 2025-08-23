@@ -10,12 +10,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const chatInput = document.getElementById('chat-input');
     const chatSend = document.getElementById('chat-send');
     const confirmButton = document.getElementById('confirm-button');
+    const eventsContainer = document.getElementById('events-container');
     
     /**
      * Creates and adds a message bubble to the chat box.
      * @param {string} text - The message content.
      * @param {string} sender - 'user' or 'bot'.
      */
+
+    // --- Global state variable to hold the events from the AI ---
+    let currentEvents = [];   
 
     // Function to add a message to the chat box
     function addMessage(text, sender) {
@@ -77,136 +81,142 @@ document.addEventListener('DOMContentLoaded', function() {
     /**
      * Handles what happens when the user sends a message from within the chat.
      */
-    async function handleChatSendMessage() {
-        const message = chatInput.value.trim();
-        if (!message) return; 
-
+    async function handleUserQuery(message) {
         addMessage(message, 'user');
-        chatInput.value = '';
         showTyping();
+        eventsContainer.innerHTML = ''; // Clear old events
 
-        const response = await fetch('http://127.0.0.1:5000/api/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: message })
-        });
-
+        try {
+            const response = await fetch('http://127.0.0.1:5000/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message })
+            });
             const data = await response.json();
+            console.log("Received from API:", data);
 
-            setTimeout(() => {
-                removeTyping();
-                addMessage(data.response, 'bot');
-            }, 1000);
-        }
+            removeTyping();
+            addMessage(data.response || "Here is your schedule:", 'bot');
 
-
-    // --- Event Listeners ---
-
-    // STARTING the chat from the welcome screen.
-    searchForm.addEventListener('submit', function(event) {
-        event.preventDefault(); 
-
-        const initialQuery = searchInput.value.trim();
-
-        // CORRECTED: This now checks if the user typed something.
-        if (initialQuery !== "") {
-            welcomeSection.style.display = 'none';
-            chatContainer.style.display = "flex";
-            
-            addMessage(initialQuery, 'user');
-            showTyping();
-
-            async function fetchInitialResponse() {
-                const response = await fetch('http://127.0.0.1:5000/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: initialQuery })     
-                });
-                
-                const data = await response.json();
-                console.log("Received from API:", data);
-                removeTyping();
-
-                addMessage(data.response || "Here is your schedule:", 'bot');
-
-                if (data.events && data.events.length > 0) {
-                    showEventList(data.events);
-                } else {
-                    console.log("No events received to display.");
-                }
+            if (data.events && data.events.length > 0) {
+                // Store the events globally and display them
+                currentEvents = data.events;
+                showEventList();
+            } else {
+                currentEvents = []; // Clear the events if none are returned
             }
-            fetchInitialResponse();
+        } catch (error) {
+            removeTyping();
+            addMessage("Oh honey, something went wrong. Please try again.", 'bot');
+            console.error("Error fetching from /api/chat:", error);
         }
-    });
+    }
 
-    function showEventList(events) {
-        console.log("showEventList called with events:", events);
-        const eventsContainer = document.getElementById('events-container');
+    function showEventList() {
+        // This function now reads from the global 'currentEvents' variable
         eventsContainer.innerHTML = ''; // Clear previous events
-        
 
-        events.forEach((event, index) => {
+        currentEvents.forEach((event, index) => {
             const eventDiv = document.createElement('div');
             eventDiv.classList.add('event-card');
-
+            
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.id = `event-${index}`;
-            checkbox.value = index; 
-            checkbox.checked = true;
+            checkbox.checked = true; // Default to checked
 
             const label = document.createElement('label');
             label.htmlFor = `event-${index}`;
-            label.innerText = `Event: ${event.summary} at ${event.start} - ${event.end}`;
+            // Correctly display the dateTime
+            label.innerText = `Event: ${event.summary} at ${event.start.dateTime}`;
 
             eventDiv.appendChild(checkbox);
             eventDiv.appendChild(label);
             eventsContainer.appendChild(eventDiv);
         });
 
-        // Add button to confirm selected events
-        const confirmButton = document.createElement('button');
-        confirmButton.innerText = 'Confirm Events';
-        confirmButton.id = 'confirm-button';
-        confirmButton.classList.add('confirm-button');
-        confirmButton.addEventListener('click', () => sendApprovedEvents(events));
-        eventsContainer.appendChild(confirmButton);
+        // Add a single confirm button at the end
+        if (currentEvents.length > 0) {
+            const confirmButton = document.createElement('button');
+            confirmButton.innerText = 'Confirm Events';
+            confirmButton.id = 'confirm-button';
+            confirmButton.addEventListener('click', sendApprovedEvents);
+            eventsContainer.appendChild(confirmButton);
+        }
     }
 
-    function sendApprovedEvents(events) {
+    async function sendApprovedEvents() {
+        // This function also reads from the global 'currentEvents' variable
         const selectedEvents = [];
-        events.forEach((event, index) => {
+        currentEvents.forEach((event, index) => {
             const checkbox = document.getElementById(`event-${index}`);
-            if (checkbox.checked) {
+            if (checkbox && checkbox.checked) {
                 selectedEvents.push(event);
             }
         });
+
         if (selectedEvents.length === 0) {
-            alert("Select at least one event to proceed.");
+            alert("Please select at least one event to confirm.");
             return;
         }
 
-        // Proceed with sending the selected events
-        fetch('http://127.0.0.1:5000/api/create_event', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ events: selectedEvents })
-        })
-        .then(res => res.json())
-        .then(data => {
-            console.log(data);
-            alert("Events sent to Google Calendar!")
+        const confirmButton = document.getElementById('confirm-button');
+        if (confirmButton) {
+            confirmButton.disabled = true;
+            confirmButton.innerText = 'Creating...';
+        }
+
+        const requests = selectedEvents.map(event => {
+            console.log("SENDING THIS JSON TO BACKEND:", event); // Final check of the data
+            return fetch('http://127.0.0.1:5000/api/create_event', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(event)
+            });
         });
+
+        try {
+            const responses = await Promise.all(requests);
+            const failed = responses.filter(res => !res.ok);
+            if (failed.length > 0) {
+                alert("Oops! Some events could not be created.");
+            } else {
+                alert("Success! All events added to your Google Calendar!");
+            }
+        } catch (error) {
+            alert("A network error occurred.");
+        } finally {
+            eventsContainer.innerHTML = ''; // Clear events after attempting to create them
+        }
     }
 
-    // Event listener for the "Buzz!" button inside the chats
-    chatSend.addEventListener('click', handleChatSendMessage);
+    // --- Event Listeners ---
 
-    // Event listener for pressing "Enter" inside the chat
-    chatInput.addEventListener("keypress", function(event) {
-        if (event.key === "Enter") {
-            handleChatSendMessage();
+    searchForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        const initialQuery = searchInput.value.trim();
+        if (initialQuery) {
+            welcomeSection.style.display = 'none';
+            chatContainer.style.display = "flex";
+            handleUserQuery(initialQuery);
         }
     });
 
+    chatSend.addEventListener('click', () => {
+        const message = chatInput.value.trim();
+        if (message) {
+            handleUserQuery(message);
+            chatInput.value = '';
+        }
+    });
+
+    chatInput.addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            const message = chatInput.value.trim();
+            if (message) {
+                handleUserQuery(message);
+                chatInput.value = '';
+            }
+        }
+    });
 });
