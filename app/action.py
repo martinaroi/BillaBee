@@ -1,5 +1,5 @@
-from .models import *
-from .context import AppContext
+from models import *
+from context import AppContext
 import datetime
 
 def create_event_action(context: AppContext, event_model: EventCreateRequest):
@@ -16,12 +16,7 @@ def create_event_action(context: AppContext, event_model: EventCreateRequest):
     if context.calendar_service is None:
         raise AttributeError("calendar_service is not initialized in AppContext.")
 
-    created_event = context.calendar_service.insert_event(
-        summary=event_model.summary,
-        description=event_model.description,
-        start_time=event_model.start.dateTime,
-        end_time=event_model.end.dateTime,
-        timezone=event_model.start.timeZone
-    )
+    # Pass the event_model as a dictionary instance, not its type
+    created_event = context.calendar_service.insert_event(event_body=event_model.model_dump(by_alias=True, exclude_none=True))
 
     return created_event
