@@ -79,6 +79,7 @@ class EventUpdateRequest(BaseModel):
     """Model for the request body when updating an event.
        Contains only the fields that can be updated.
     """
+    event_id: str
     summary: Optional[str] = None
     start: Optional[EventDateTime] = None
     end: Optional[EventDateTime] = None
@@ -150,10 +151,6 @@ class CalendarList(BaseModel):
     class Config:
         populate_by_name = True # Changed from allow_population_by_field_name
 
-# --- Models for Advanced Actions --- 
-
-# --- Check Attendee Status ---
-
 # --- Find Availability (Free/Busy) ---
 class FreeBusyRequestItem(BaseModel):
     id: str # Calendar ID
@@ -190,20 +187,6 @@ class FreeBusyResponse(BaseModel):
     class Config:
         populate_by_name = True
 
-# --- Find Mutual Availability & Schedule ---
-class ScheduleMutualRequest(BaseModel):
-    attendee_calendar_ids: List[str] = Field(..., description="List of calendar IDs (usually emails) for attendees whose availability should be checked.")
-    time_min: datetime.datetime
-    time_max: datetime.datetime
-    duration_minutes: int
-    event_details: EventCreateRequest # Use the existing model for core event info
-    organizer_calendar_id: str = 'primary'
-    working_hours_start_str: Optional[str] = Field(None, description="Optional start time for working hours constraint (HH:MM format)")
-    working_hours_end_str: Optional[str] = Field(None, description="Optional end time for working hours constraint (HH:MM format)")
-    send_notifications: bool = True
-
-# Response is GoogleCalendarEvent
-
 # --- Project Recurring Events ---
 class ProjectRecurringRequest(BaseModel):
     time_min: datetime.datetime
@@ -233,4 +216,22 @@ class DailyBusynessStats(BaseModel):
 
 class AnalyzeBusynessResponse(BaseModel):
     # Use string representation for date keys in JSON
-    busyness_by_date: Dict[str, DailyBusynessStats] = Field(..., description="Mapping of date string (YYYY-MM-DD) to busyness stats") 
+    busyness_by_date: Dict[str, DailyBusynessStats] = Field(..., description="Mapping of date string (YYYY-MM-DD) to busyness stats")
+
+# --- Tool Calling Model ---
+class AIToolCall(BaseModel):
+    """Represents the tool the AI has decided to use and its parameters."""
+    tool_name: str = Field(..., description="The name of the tool to be called (e.g., 'create_event', 'reply_text').")
+    parameters: dict[str, Any] = Field(default_factory=dict, description="The arguments for the tool, as a dictionary.")
+
+class FindEventRequest(BaseModel):
+    """Represents a request to find an event."""
+    query: str
+    time_min: datetime.datetime = Field(..., alias='timeMin')
+    time_max: datetime.datetime = Field(..., alias='timeMax')
+
+
+class DeleteEventRequest(BaseModel):
+    """Represents a request to delete an event."""
+    event_id: str
+

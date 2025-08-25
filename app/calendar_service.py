@@ -5,6 +5,7 @@ from google.oauth2.credentials import Credentials
 import datetime 
 from googleapiclient.errors import HttpError
 from typing import Any
+from zoneinfo import ZoneInfo
 
 
 SCOPES = ['https://www.googleapis.com/auth/calendar']
@@ -49,5 +50,61 @@ class GoogleCalendarService:
         except HttpError as error:
             print(f"An error occurred: {error}")
             raise 
+
+    def search_events(self, query: str, max_results: int = 5):
+        """
+        Searches for events in the primary calendar matching the given query string.
+        """
+        try:
+            # Get the ZoneInfo object for Central European Time
+            cet_tz = ZoneInfo("Europe/Berlin")
+            now = datetime.datetime.now(cet_tz).isoformat()
+            events_result = self.service.events().list(
+                calendarId='primary', 
+                q=query,
+                timeMin=now,
+                maxResults=max_results,
+                singleEvents=True,
+                orderBy='startTime'
+            ).execute()
+            events = events_result.get('items', [])
+
+            print(f"Found {len(events)} events matching query '{query}'.")
+            return events
+        except HttpError as error:
+            print(f"An error occurred: {error}")
+            raise
+    
+    def delete_event(self, event_id: str):
+        """
+        Deletes an event in the primary calendar matching the given event id.
+        """
+        try:
+            self.service.events().delete(calendarId='primary', eventId=event_id).execute()
+            print(F"Event deleted: {event_id}")
+            return 
+        except HttpError as error:
+            print(f"An error occurred: {error}")
+            raise
+    
+    def update_event(self, event_id: str, updated_data: dict[str, Any]):
+        """
+        Updates an event if the primary calendar matching the given event id.
+        """
+        try:
+            event_updates = self.service.events().update(
+                calendarId ='primary', 
+                eventId = event_id, 
+                body= updated_data
+            ).execute()
+
+            print(f"Event updated: {event_updates.get('htmlLink')}")
+            return event_updates
+        except HttpError as error:
+            print(f"An error occurred: {error}")
+            raise
+    
+
+
 
 

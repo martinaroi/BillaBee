@@ -12,6 +12,7 @@ from models import *
 from pydantic import ValidationError
 from context import *
 from action import *
+from dateutil.parser import parse
 
 # Load environment variables from .env file
 script_dir = Path(__file__).parent
@@ -31,24 +32,78 @@ app_context = AppContext()
 
 def get_ai_response(user_message):
     """ Sends a message to the OpenAI API and returns the response. """
-    system_message = """
-    You are Billa the Bee, a cheerful and helpful personal scheduling assistant. 
-    Normally, you respond with friendly text. 
-    BUT if the user is asking you to schedule something, 
-    Always reply in VALID JSON with this exact structure:
-    {
-      "response": "<short friendly text to the user>",
-      "events": [
-        {
-          "summary": "<short title>",
-          "description": "<optional details>",
-          "start": { "dateTime": "<ISO 8601 datetime>", "timeZone": "<valid timezone name>" },
-          "end": { "dateTime": "<ISO 8601 datetime>", "timeZone": "<valid timezone name>" }
-        }
-        ]
-    }
-    If there are no events, reply with "events": [].
+
+    now = datetime.datetime.now().isoformat()
+
+    system_message = f"""
+    You are "ScheduleBot," an automated personal assistant that translates user requests into structured JSON commands for a Google Calendar system.
+    Your ONLY job is to translate the user's request into a single, valid JSON object with the following structure:
+    {{"tool_name": "<name_of_the_tool>", "parameters": {{<parameters_for_the_tool>}}}}
+
+    DO NOT add any conversational text or explanations outside of the JSON object.
+
+    --- IMPORTANT RULES ---
+    1. You have NO ACCESS to the user's calendar. Do NOT pretend you can check for conflicts or look up event details. Your job is only to create the correct JSON command to ask the system to do something.
+    2. If a user wants to change or delete an event, you must ALWAYS use the "find_event" tool first to let the system locate the event.
+    3. You MUST use the current date and time to resolve all relative requests (e.g., "tomorrow", "next week"). The current date and time is: {now} (in UTC).
+    4. When creating or updating an event, you MUST include the "timeZone" parameter. Unless the user specifies a different timezone, assume all events should be created in the "Europe/Berlin" timezone
+    5. All 'dateTime' fields MUST be in RFC3339 format (e.g., 'YYYY-MM-DDTHH:MM:SS').
+
+    --- AVAILABLE TOOLS ---
+
+    1. tool_name: "create_event"
+        - Use this to create a new event.
+        - parameters: {{
+            "summary": "<string>",
+            "description": "<string, optional>",
+            "location": "<string, optional>",
+            "start": {{
+                "dateTime": "<The start time in YYYY-MM-DDTHH:MM:SS format>",
+                "timeZone": "<The IANA Time Zone string, e.g., 'Europe/Berlin'>"
+            }},
+            "end": {{
+                "dateTime": "<The end time in YYYY-MM-DDTHH:MM:SS format>",
+                "timeZone": "<The IANA Time Zone string, e.g., 'Europe/Berlin'>"
+            }}
+        }}
+
+    2. tool_name: "find_event"
+        - Use this when the user wants to get details about, update, or delete an event.
+        - parameters: {{
+            "query": "<The user's description of the event, e.g., 'dentist appointment' or '3pm meeting'>",
+            "timeMin": "<The start of the search window in YYYY-MM-DDTHH:MM:SS format>",
+            "timeMax": "<The end of the search window in YYYY-MM-DDTHH:MM:SS format>"
+        }}
+
+    3. tool_name: "delete_event"
+        - Use this ONLY to delete an event when you ALREADY have the event_id.
+        - parameters: {{
+            "event_id": "<The specific ID of the event to delete>"
+        }}
+
+    4. tool_name: "update_event"
+        - Use this ONLY to update an event when you ALREADY have the event_id.
+        - parameters: {{
+            "event_id": "<The specific ID of the event to update>",
+            "summary": "<string, optional>",
+            "description": "<string, optional>",
+            "start": {{
+                "dateTime": "<The new start time in YYYY-MM-DDTHH:MM:SS format>",
+                "timeZone": "<The new IANA Time Zone string>"
+            }},
+            "end": {{
+                "dateTime": "<The new end time in YYYY-MM-DDTHH:MM:SS format>",
+                "timeZone": "<The new IANA Time Zone string>"
+            }}
+        }}
+
+    5. tool_name: "reply_text"
+        - Use this for any request that is not an action, like a greeting, a question, or if you cannot understand the request.
+        - parameters: {{
+            "text": "<A friendly, helpful text response to the user>"
+        }}
     """
+
     try: 
         response = openai.chat.completions.create(
             model="gpt-4o",
@@ -83,70 +138,62 @@ def clean_json_string(json_str):
 @app.route('/api/chat', methods=['POST'])
 def chat_api():
     data = request.json
-    if data is None:
+    if data is None: 
         return jsonify({'response': "No JSON data received."}), 400
     
     user_message = data.get('message')
     bot_response = get_ai_response(user_message)
     cleaned = clean_json_string(bot_response)
 
-    parsed, message = split_json_text(cleaned)
-
-    if parsed:
-        events = parsed.get("events", [])
-        response = parsed.get('response', message)
-        return jsonify({"response": response, 'events': events})
-    else:
-        return jsonify({'response': bot_response, 'events': []})
-    
-@app.route('/api/create_event', methods=['POST'])
-def create_event_api():
-    # Safety checks remain the same
-    if not app_context.calendar_service:
-        return jsonify({"status": "error", "message": "Server not configured."}), 503
-
-    data = request.json
-    if not data or not isinstance(data, dict):
-        return jsonify({"status": "error", "message": "Invalid JSON body."}), 400
-
     try:
-        # 1. Validate the incoming request (This works)
-        event_model = EventCreateRequest(**data)
-        
-        # 2. Perform the action (This works, and the event is created)
-        created_event_dict = create_event_action(app_context, event_model)
+        parsed = json.loads(cleaned)
+        tool_name = parsed.get("tool_name")
+        parameters = parsed.get("parameters", {})
 
-        # 3. --- THIS IS THE GUARANTEED FIX ---
-        # Instead of trying to sanitize the whole Google object, we build a new,
-        # simple dictionary with only the safe data we need.
-        
-        simple_response_event = {
-            "summary": created_event_dict.get("summary"),
-            "description": created_event_dict.get("description"),
-            "htmlLink": created_event_dict.get("htmlLink"),
+        result = None
+
+        if tool_name == "find_event":
+            find_model = FindEventRequest(**parameters)
+            time_min = find_model.time_min
+            time_max = find_model.time_max
+            found_events_models = find_event_action(app_context, time_min, time_max, find_model)
+
+            events_as_dicts = [model.model_dump(by_alias=True) for model in found_events_models]
             
-            # The 'start' and 'end' objects from the API response contain
-            # simple strings, which are safe for JSON.
-            "start": created_event_dict.get("start"),
-            "end": created_event_dict.get("end")
-        }
+            result = events_as_dicts
 
-        # 4. We pass this new, simple, guaranteed-safe dictionary to jsonify.
-        return jsonify({"status": "success", "event": simple_response_event}), 201
+        elif tool_name == "create_event":
+            create_model = EventCreateRequest(**parameters)
+            create_event_model = create_event_action(app_context, create_model)
 
+            result = create_event_model
+
+        elif tool_name == "delete_event":
+            delete_model = DeleteEventRequest(**parameters)
+            delete_event_model = delete_event_action(app_context, delete_model) 
+
+            result = delete_event_model
+
+        elif tool_name == "update_event":
+            update_model = EventUpdateRequest(**parameters)
+            update_event_model = update_event_action(app_context, update_model)
+
+            result = update_event_model
+
+        return jsonify(result)
+    
+    except (json.JSONDecodeError, AttributeError):
+        # If the AI return plain text
+        return jsonify({"text":cleaned})
+    
     except ValidationError as e:
-        # This error handling is correct
-        print(f"!!! PYDANTIC VALIDATION ERROR !!!\n{e.json()}\n!!! END OF ERROR !!!")
-        return jsonify({
-            "status": "error", 
-            "message": "Invalid data provided", 
-            "details": e.errors()
-        }), 400
+        # If the AI's parameters are wrong 
+        return jsonify({"message": "Invalid parameters form AI.", "details": e.errors()}), 400
     
     except Exception as e:
-        # This error handling is correct
-        print(f"!!! AN UNEXPECTED ERROR OCCURRED: {e} !!!")
-        return jsonify({"status": "error", "message": "An internal server error occurred."}), 500
+        # General catch-all for other error
+        print (f"An unexpected error occurred: {e}")
+        return jsonify({"message": "An internal server error occurred."}), 500
 
 @app.route('/')
 def home():
