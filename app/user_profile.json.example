@@ -1,0 +1,13 @@
+{
+    "name": "Your Name Here",
+    "timezone": "Your_IANA_Timezone (e.g., America/New_York)",
+    "priorities": [
+        "This is my most important goal.",
+        "This is another important thing.",
+        "This is a recurring personal commitment."
+    ],
+    "work_hours": {
+        "start": "09:00",
+        "end": "17:00"
+    }
+}
