@@ -11,7 +11,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const chatSend = document.getElementById('chat-send');
     const confirmButton = document.getElementById('confirm-button');
     const eventsContainer = document.getElementById('events-container');
-    
+
+    const userSelect = document.getElementById('user');
+    const selectedUser = userSelect.value;
     /**
      * Creates and adds a message bubble to the chat box.
      * @param {string} text - The message content.
@@ -20,6 +22,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- Global state variable to hold the events from the AI ---
     let currentEvents = [];   
+
+    // Function to switch user
+    async function switchUser() {
+        console.log("Switching to user:", selectedUser);
+
+        try {
+            const response = await fetch ('/api/set_user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user: selectedUser })
+            });
+
+            if(response.ok) {
+                alert(`Switched to user: ${selectedUser}`);
+            } else { 
+                alert("Failed to switch user.");
+            }
+        } catch (error) {
+            console.error("Error switching user:", error);
+        }
+    }
 
     // Function to add a message to the chat box
     function addMessage(text, sender) {
@@ -96,15 +119,28 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("Received from API:", data);
 
             removeTyping();
-            addMessage(data.response || "Here is your schedule:", 'bot');
 
-            if (data.events && data.events.length > 0) {
-                // Store the events globally and display them
-                currentEvents = data.events;
-                showEventList();
+            if(data && data.status === 'success'){
+                const tool_name = data.tool_name;
+                const responseData = data.data;
+            
+
+                if(tool_name === 'reply_text'){
+                    addMessage(responseData.text, 'bot');
+                } else if (tool_name === 'find_event') {
+                    currentEvents = responseData;
+                    showEventList();
+                } else if (tool_name === 'create_event') {
+                    addMessage(responseData.message, 'bot');
+                } else if (tool_name === 'delete_event' || tool_name === 'update_event') {
+                    addMessage(responseData.message, 'bot');
+                }
+
             } else {
-                currentEvents = []; // Clear the events if none are returned
+                const errorMessage = data ? data.message : "An unknown error occurred.";
+                addMessage(`Oops, something went wrong: ${errorMessage}`, 'bot');
             }
+
         } catch (error) {
             removeTyping();
             addMessage("Oh honey, something went wrong. Please try again.", 'bot');
@@ -167,26 +203,37 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const requests = selectedEvents.map(event => {
-            console.log("SENDING THIS JSON TO BACKEND:", event); // Final check of the data
-            return fetch('http://127.0.0.1:5000/api/create_event', {
+            const messageforAI = `Please use the create_event tool to create an event with these exact details: ${JSON.stringify(event)}`;
+            
+            const requestBody = {
+                message: messageforAI
+            };
+
+            return fetch('http://127.0.0.1:5000/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(event)
+                body: JSON.stringify(requestBody)
             });
         });
 
-        try {
+        try{
             const responses = await Promise.all(requests);
-            const failed = responses.filter(res => !res.ok);
-            if (failed.length > 0) {
-                alert("Oops! Some events could not be created.");
-            } else {
+
+            const successful = responses.filter(res => res.ok);
+
+            if (successful.length === selectedEvents.length) {
                 alert("Success! All events added to your Google Calendar!");
+            } else {
+                alert(`Oops! ${successful.length} out of ${selectedEvents.length} events could not be created.`);
             }
         } catch (error) {
             alert("A network error occurred.");
         } finally {
             eventsContainer.innerHTML = ''; // Clear events after attempting to create them
+            if (confirmButton) {
+                confirmButton.disabled = false;
+                confirmButton.innerText = 'Confirm Events';
+            }
         }
     }
 
