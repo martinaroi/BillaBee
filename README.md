@@ -11,7 +11,6 @@ BillaBee is a conversational AI assistant designed to help you plan your perfect
     *   **Read** existing events ("What's on my calendar for Friday?").
     *   **Update** events in a conversational flow.
     *   **Delete** events with simple follow-up commands ("Okay, cancel that meeting").
-*   **Context-Aware Memory:** BillaBee remembers the previous turns of your conversation, allowing you to refer to events with pronouns like "it" or "that".
 *   **Personalized for You:** Using a simple configuration file, BillaBee knows your work hours, priorities, and timezone to create schedules that are truly tailored to you.
 
 ---
