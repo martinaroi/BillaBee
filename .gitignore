@@ -1,4 +1,15 @@
 *.env
-__pycache__/
+
 credentials.json
 token.json
+
+# Personal user data
+user_profile_Martina.json
+user_profile_Vita.json
+
+# Python virtual environment folder
+venv/
+
+# Python cache files
+__pycache__/
+*.pyc
