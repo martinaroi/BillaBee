@@ -1,7 +1,6 @@
-import datetime # Import the module itself
+import datetime
 from pydantic import BaseModel, Field, EmailStr
 from typing import Optional, List, Dict, Any
-# from datetime import datetime, date # Keep original import commented for reference
 
 # Based on Google Calendar API v3 Event resource documentation:
 # https://developers.google.com/calendar/api/v3/reference/events#resource
@@ -9,25 +8,16 @@ from typing import Optional, List, Dict, Any
 class EventDateTime(BaseModel):
     """Represents the start or end time of an event."""
     date: Optional[datetime.date] = None
-    dateTime: Optional[datetime.datetime] = None  # Renamed from 'date_time' to match API JSON
-    timeZone: Optional[str] = None  # Renamed from 'time_zone'
-
+    dateTime: Optional[datetime.datetime] = None
+    timeZone: Optional[str] = None
 
 class EventReminderOverride(BaseModel):
     method: Optional[str] = None
     minutes: Optional[int] = None
 
-    class Config:
-        populate_by_name = True  # Changed from allow_population_by_field_name
-        # orm_mode = True # Removed, orm_mode is deprecated in Pydantic V2, use from_attributes=True
-
 class EventReminders(BaseModel):
-    useDefault: bool = Field(..., alias="useDefault")  # Renamed from 'use_default'
+    useDefault: bool = Field(..., alias="useDefault")
     overrides: Optional[List[EventReminderOverride]] = None
-
-    class Config:
-        populate_by_name = True  # Changed from allow_population_by_field_name
-        # orm_mode = True # Removed, orm_mode is deprecated in Pydantic V2, use from_attributes=True
 
 # --- Main Event Model --- 
 
@@ -54,10 +44,6 @@ class GoogleCalendarEvent(BaseModel):
     reminders: Optional[EventReminders] = Field(None, description="Information about the event's reminders.")
     # Add other fields as needed (e.g., attachments, conferenceData, gadget, source, etc.)
 
-    class Config:
-        populate_by_name = True
-        # Consider adding validation logic, e.g., ensuring start is before end
-
 # --- Models for API Requests/Responses --- 
 
 class EventCreateRequest(BaseModel):
@@ -69,6 +55,9 @@ class EventCreateRequest(BaseModel):
     location: Optional[str] = None
     recurrence: Optional[List[str]] = Field(None, description="List of RRULEs, EXRULEs, RDATEs or EXDATEs for recurring events.")
     reminders: Optional[EventReminders] = Field(None, description="Notification settings for the event.")
+    # Visual theme/color support
+    colorId: Optional[str] = Field(None, alias='colorId', description="Google Calendar color ID (1-11).")
+    theme: Optional[str] = Field(None, exclude=True, description="High-level theme (e.g., 'Work', 'Study', 'Exercise') used to infer color.")
     # Add other creatable fields as needed
 
 class QuickAddEventRequest(BaseModel):
@@ -85,10 +74,9 @@ class EventUpdateRequest(BaseModel):
     end: Optional[EventDateTime] = None
     description: Optional[str] = None
     location: Optional[str] = None
+    colorId: Optional[str] = Field(None, alias='colorId', description="Google Calendar color ID (1-11).")
+    theme: Optional[str] = Field(None, exclude=True, description="High-level theme to infer color.")
     # Add other updatable fields
-
-
-# You might also want models for CalendarList entries, etc.
 
 # Define NotificationSettings first as it's used in CalendarListEntry
 class NotificationSettings(BaseModel):
@@ -144,12 +132,12 @@ class CalendarList(BaseModel):
     """Represents the user's list of calendars."""
     kind: str = "calendar#calendarList"
     etag: str
-    nextPageToken: Optional[str] = None # Renamed from 'next_page_token'
-    nextSyncToken: Optional[str] = None # Renamed from 'next_sync_token'
+    nextPageToken: Optional[str] = None
+    nextSyncToken: Optional[str] = None
     items: List[CalendarListEntry]
 
     class Config:
-        populate_by_name = True # Changed from allow_population_by_field_name
+        populate_by_name = True
 
 # --- Find Availability (Free/Busy) ---
 class FreeBusyRequestItem(BaseModel):
@@ -161,9 +149,6 @@ class FreeBusyRequest(BaseModel):
     items: List[FreeBusyRequestItem]
     # Optional: timeZone, groupExpansionMax, calendarExpansionMax
     time_zone: Optional[str] = Field(None, alias='timeZone')
-
-    class Config:
-        populate_by_name = True
 
 class TimePeriod(BaseModel):
     start: datetime.datetime
@@ -182,10 +167,6 @@ class FreeBusyResponse(BaseModel):
     time_min: datetime.datetime = Field(..., alias='timeMin')
     time_max: datetime.datetime = Field(..., alias='timeMax')
     calendars: Dict[str, CalendarBusyInfo] = {}
-    # Optional: groups
-
-    class Config:
-        populate_by_name = True
 
 # --- Project Recurring Events ---
 class ProjectRecurringRequest(BaseModel):
@@ -229,7 +210,6 @@ class FindEventRequest(BaseModel):
     query: str
     time_min: datetime.datetime = Field(..., alias='timeMin')
     time_max: datetime.datetime = Field(..., alias='timeMax')
-
 
 class DeleteEventRequest(BaseModel):
     """Represents a request to delete an event."""
