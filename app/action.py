@@ -2,6 +2,25 @@ from models import *
 from context import AppContext
 import datetime
 
+# Map high-level themes to Google Calendar colorId 
+THEME_COLOR_MAP: dict[str, str] = {
+    "Work": "#AF6C34",    
+    "Study": "#C6A868",       
+    "Exercise": "#87A390", 
+    "Wellbeing": "#87A390",  
+    "Quality Time with Vita": "#BE2E46",     
+    "Social": "#957367",     
+    "Errand": "#7F803E",     
+    "Bachelor Thesis": "#BA9504",      
+}
+
+def _apply_theme_color(event_body: dict, theme: str | None):
+    if not theme:
+        return
+    color = THEME_COLOR_MAP.get(theme.strip().title())
+    if color and 'colorId' not in event_body:
+        event_body['colorId'] = color
+
 def create_event_action(context: AppContext, event_model: EventCreateRequest):
     """
     This is the Protocol for creating an envent.#
@@ -16,8 +35,12 @@ def create_event_action(context: AppContext, event_model: EventCreateRequest):
     if context.calendar_service is None:
         raise AttributeError("calendar_service is not initialized in AppContext.")
 
-    # Pass the event_model as a dictionary instance, not its type
-    created_event = context.calendar_service.insert_event(event_body=event_model.model_dump(by_alias=True, exclude_none=True))
+    # Prepare body and apply theme->color mapping if provided
+    body = event_model.model_dump(by_alias=True, exclude_none=True)
+    _apply_theme_color(body, getattr(event_model, 'theme', None))
+
+    # Pass the event body to the calendar service
+    created_event = context.calendar_service.insert_event(event_body=body)
 
     return created_event
 
@@ -53,6 +76,8 @@ def update_event_action(context: AppContext, update_model:EventUpdateRequest):
     if not context.calendar_service:
         raise Exception("Calendar service is not initialized.")
     
-    updated_event = context.calendar_service.update_event(event_id=update_model.event_id, updated_data=update_model.model_dump(by_alias=True, exclude_none=True))
+    body = update_model.model_dump(by_alias=True, exclude_none=True)
+    _apply_theme_color(body, getattr(update_model, 'theme', None))
+    updated_event = context.calendar_service.update_event(event_id=update_model.event_id, updated_data=body)
 
     return updated_event
