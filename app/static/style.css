@@ -34,6 +34,7 @@ header {
 .bee-icon {
     font-size: 25px;
     animation: float 3s ease-in-out infinite;
+  cursor: pointer;
 }
 
 .bee-icon:nth-child(1){ animation-delay: 0.5s; }
@@ -58,6 +59,7 @@ main {
 .welcome-section {
   display: flex;
   flex-direction: column;
+  gap: 16px;
   text-align: center;
   width: 100%;
 }
@@ -80,7 +82,7 @@ main {
   width: 100%;
 }
 
-.search-container input[type="search"] {
+.search-container textarea {
   padding: 14px 25px;
   border: 2px solid #444;
   border-radius: 30px;
@@ -88,9 +90,12 @@ main {
   width: 100%;
   background-color: #2a2a2a;
   color: #e6e6e6;
+  resize: none;
+  overflow: hidden;
+  max-height: 200px;
 }
 
-.search-container input[type="search"]:focus {
+.search-container textarea:focus {
   outline: none;
   border-color: #eea825;
 }
@@ -111,29 +116,33 @@ background: #ffc04d;
 transform: translateY(-1px);
 }
 
-.calendar-link {
-text-align: center;
-position:fixed;
-bottom: 10px;
-right:40px;
-margin: 40px 0;
-transition: all 0.5s ease;
+
+.user-select option, select {
+  background: #2a2a2a;
+  color: #c06f18;
+  border: 1px solid #444;
+  border-radius: 10px;
+  padding: 10px 8px;
 }
 
+.calendar-link { text-align: center; }
+
 .bee-wisdom {
-background-color: #2a2a2a;
-border-radius: 4px;
-padding: 15px 120px;
-margin-top: 30px;
-text-align: center;
-border-left: 5px solid #c06f18;
-font-size: 11px;
-font-style: italic;
-line-height: 1.6;
-position: fixed;
-bottom: 30px;
-left: 20px;
-transition: all 0.5s ease;
+  background-color: #2a2a2a;
+  border-radius: 4px;
+  padding: 25px 100px;
+  text-align: center;
+  border-left: 5px solid #c06f18;
+  font-size: 11px;
+  font-style: italic;
+  line-height: 1.6;
+}
+
+.welcome-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: 10px;
 }
 .bee-wisdom p {
 margin: 6px 0;
@@ -165,6 +174,8 @@ font-weight: 600;
 
 .input-area {
   display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 #chat-input {
@@ -175,6 +186,9 @@ font-weight: 600;
   width: 100%;
   background-color: #2a2a2a;
   color: #e6e6e6;
+  resize: none;
+  overflow: hidden;
+  max-height: 200px;
 }
 #chat-input:focus { outline: none; }
 
@@ -194,6 +208,18 @@ font-weight: 600;
   transform: translateY(-1px);
 }
 
+.chat-calendar-link a {
+  display: inline-block;
+  background: #c06f18;
+  color: #1a1a1a;
+  padding: 10px 12px;
+  border-radius: 16px;
+  text-decoration: none;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.chat-calendar-link a:hover { background: #ffc04d; }
+
 .events-container {
   display: flex;
   flex-direction: column;
@@ -209,6 +235,15 @@ font-weight: 600;
 
 .events-card label {
   margin-left:8 px;
+}
+
+.event-card select {
+  margin-left: 10px;
+  background: #2a2a2a;
+  color: #e6e6e6;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 4px 8px;
 }
 
 .add-button {
@@ -233,6 +268,29 @@ font-weight: 600;
   line-height: 1.4;
 }
 .message p { margin: 0; padding: 0; }
+/* Markdown content inside messages */
+.message h1, .message h2, .message h3 {
+  margin: 6px 0 4px;
+  line-height: 1.2;
+}
+.message h1 { font-size: 1.25rem; }
+.message h2 { font-size: 1.15rem; }
+.message h3 { font-size: 1.05rem; }
+.message ul, .message ol { margin: 6px 0 6px 18px; }
+.message li { margin: 2px 0; }
+.message code { 
+  background: rgba(0,0,0,0.15);
+  padding: 0 4px; 
+  border-radius: 4px; 
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+.message pre {
+  background: rgba(0,0,0,0.15);
+  padding: 8px 10px;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+.message a { text-decoration: underline; }
 .message .timestamp {
   font-size: 0.75rem;
   color: #fff;
@@ -286,4 +344,16 @@ footer {
   font-size: 0.9rem;
   margin-top: auto;
   width: 100%;
+}
+
+/* Responsive: stack the bottom widgets on small screens */
+@media (max-width: 900px) {
+  .welcome-bottom {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .bee-wisdom {
+    padding: 12px 16px;
+  }
 }

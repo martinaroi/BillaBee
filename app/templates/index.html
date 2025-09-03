@@ -5,6 +5,9 @@
         <link rel="stylesheet" href="/static/style.css">
         <!-- Removed the unused "Patrick Hand" font for slightly faster loading -->
         <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Markdown rendering + sanitization -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
     </head>
     <body>
         <header>
@@ -35,19 +38,20 @@
                 <!-- The form MUST have id="search-form" -->
                 <form class="search-container" id="search-form">
                     <!-- The input MUST have id="search" -->
-                    <input type="search" id="search" name="q" placeholder="What do you need to get done today?">
+                    <textarea id="search" name="q" rows="1" placeholder="What do you need to get done today?"></textarea>
                     <button type="submit">Let's get buzzzy! 🐝</button>
                 </form>
                 
-                <div class="calendar-link">
-                    <a href="https://calendar.google.com/" class="honey-button">
-                        🐝 Fly to your Honeycomb Calendar 🐝
-                    </a>
-                </div>
-                
-                <div class="bee-wisdom">
-                    <p>Remember: Just like bees in a hive, every small task contributes to something sweet!</p>
-                    <p>Bee productive, but don't forget to stop and smell the flowers! 🍯🌸</p>
+                <div class="welcome-bottom">
+                    <div class="bee-wisdom">
+                        <p>Remember: Just like bees in a hive, every small task contributes to something sweet!</p>
+                        <p>Bee productive, but don't forget to stop and smell the flowers! 🍯🌸</p>
+                    </div>
+                    <div class="calendar-link">
+                        <a href="https://calendar.google.com/" class="honey-button">
+                            🐝 Fly to your Honeycomb Calendar 🐝
+                        </a>
+                    </div>
                 </div>
             </div>
 
@@ -57,8 +61,13 @@
                     <!-- Messages will appear here -->
                 </div>
                 <div class="input-area">
-                    <input type="text" id="chat-input" placeholder="Type your message to Billa the Bee...">
+                    <textarea id="chat-input" rows="1" placeholder="Type your message to Billa the Bee..."></textarea>
                     <button id="chat-send">Buzz! 🐝</button>
+                    <div class="chat-calendar-link">
+                        <a href="https://calendar.google.com/" target="_blank" rel="noopener noreferrer">
+                            Calendar
+                        </a>
+                    </div>
                 </div>
                 <div class="events-container" id="events-container">
                 </div>

@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const chatSend = document.getElementById('chat-send');
     const confirmButton = document.getElementById('confirm-button');
     const eventsContainer = document.getElementById('events-container');
+    const beeIcons = document.querySelectorAll('.bee-icon');
 
     const userSelect = document.getElementById('user');
     const selectedUser = userSelect.value;
@@ -56,11 +57,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Create a separate element for the text content
-        const textElement = document.createElement('p');
-        textElement.textContent = text;
+        const textElement = document.createElement('div');
+        // For bot messages, allow Markdown -> sanitized HTML; user stays plain text
+        if (sender === 'bot') {
+            try {
+                const html = marked.parse(text || '');
+                textElement.innerHTML = DOMPurify.sanitize(html, {USE_PROFILES: {html: true}});
+            } catch (e) {
+                // Fallback to text if something goes wrong
+                textElement.textContent = text;
+            }
+        } else {
+            textElement.textContent = text;
+        }
         
         // Create a separate element for the timestamp
-        const timeElement = document.createElement('span');
+    const timeElement = document.createElement('span');
         timeElement.classList.add('timestamp'); // Give it a class for potential styling
         timeElement.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -166,8 +178,20 @@ document.addEventListener('DOMContentLoaded', function() {
             // Correctly display the dateTime
             label.innerText = `Event: ${event.summary} at ${event.start.dateTime}`;
 
+            // Theme selector
+            const themeSelect = document.createElement('select');
+            themeSelect.id = `theme-${index}`;
+            const themes = ['Auto','Work','Study','Exercise','Health','Wellbeing','Family','Social','Errand','Focus'];
+            themes.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t;
+                opt.textContent = t;
+                themeSelect.appendChild(opt);
+            });
+
             eventDiv.appendChild(checkbox);
             eventDiv.appendChild(label);
+            eventDiv.appendChild(themeSelect);
             eventsContainer.appendChild(eventDiv);
         });
 
@@ -187,7 +211,16 @@ document.addEventListener('DOMContentLoaded', function() {
         currentEvents.forEach((event, index) => {
             const checkbox = document.getElementById(`event-${index}`);
             if (checkbox && checkbox.checked) {
-                selectedEvents.push(event);
+                // Clone event to avoid mutating the original
+                const eventCopy = JSON.parse(JSON.stringify(event));
+                const themeSel = document.getElementById(`theme-${index}`);
+                if (themeSel) {
+                    const chosen = themeSel.value;
+                    if (chosen && chosen !== 'Auto') {
+                        eventCopy.theme = chosen;
+                    }
+                }
+                selectedEvents.push(eventCopy);
             }
         });
 
@@ -239,6 +272,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- Event Listeners ---
 
+    // Make the bee icons navigate back to the welcome screen
+    beeIcons.forEach((icon) => {
+        icon.setAttribute('title', 'Go to Home');
+        icon.addEventListener('click', () => {
+            // Show welcome, hide chat
+            if (welcomeSection) welcomeSection.style.display = 'flex';
+            if (chatContainer) chatContainer.style.display = 'none';
+            // Optional: clear events panel and focus search
+            if (eventsContainer) eventsContainer.innerHTML = '';
+            if (searchInput) searchInput.focus();
+        });
+    });
+
     searchForm.addEventListener('submit', function(event) {
         event.preventDefault();
         const initialQuery = searchInput.value.trim();
@@ -246,6 +292,14 @@ document.addEventListener('DOMContentLoaded', function() {
             welcomeSection.style.display = 'none';
             chatContainer.style.display = "flex";
             handleUserQuery(initialQuery);
+        }
+    });
+
+    // In a textarea, Enter should submit (unless Shift+Enter)
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            searchForm.requestSubmit();
         }
     });
 
@@ -257,8 +311,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    chatInput.addEventListener("keypress", function(event) {
-        if (event.key === "Enter") {
+    chatInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
             const message = chatInput.value.trim();
             if (message) {
                 handleUserQuery(message);
@@ -266,4 +321,19 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
+
+
+    searchInput.addEventListener("input", () => {
+        searchInput.style.height = 'auto';
+        searchInput.style.height = (searchInput.scrollHeight) + 'px';
+    });
+
+    searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); searchForm.requestSubmit()}});
+
+    chatInput.addEventListener("input", () => {
+        chatInput.style.height = 'auto';
+        chatInput.style.height = (chatInput.scrollHeight) + 'px';
+    });
+    
+    chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); chatSend.click()}});
 });
