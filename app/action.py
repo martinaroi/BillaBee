@@ -8,7 +8,7 @@ THEME_COLOR_MAP: dict[str, str] = {
     "Study": "#C6A868",       
     "Exercise": "#87A390", 
     "Wellbeing": "#87A390",  
-    "Quality Time with Vita": "#BE2E46",     
+    "Quality Time": "#BE2E46",     
     "Social": "#957367",     
     "Errand": "#7F803E",     
     "Bachelor Thesis": "#BA9504",      

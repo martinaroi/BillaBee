@@ -157,7 +157,7 @@ def get_personal_assistant_response(user_message, user_profile, history=None):
     - Preferences: {user_profile['preferences']}
 
         --- Core Guidelines ---
-    1. Always respect fixed anchors (work, workouts, Vita time).
+    1. Always respect fixed anchors (work, workouts, etc.).
     2. Schedule focus blocks for thesis/university in {user_profile['name']} natural peak times: 
        mornings before 11:00 and evenings 18:00 to 00:00.
     3. Afternoons (12:00 to 17:00) should be lighter: rest, errands, casual reading, recovery.
