@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+env/
+venv/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+tests/
+
+# Documentation
+README.md
+TODO
+LICENSE
+
+# Credentials (these should be mounted or passed as env vars)
+app/credentials.json
+app/token.json
+app/user_profile*.json
+env/production.env
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

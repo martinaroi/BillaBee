@@ -1,0 +1,12 @@
+# Coolify Configuration File
+# This file helps Coolify understand how to deploy your application
+
+# Build configuration
+BUILD_COMMAND=""
+# Docker build is automatic from Dockerfile
+
+# Port configuration (Coolify will map this automatically)
+PORT=5000
+
+# Health check endpoint
+HEALTHCHECK_PATH=/
