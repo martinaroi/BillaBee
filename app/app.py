@@ -13,12 +13,20 @@ from pydantic import ValidationError
 from context import *
 from action import *
 from dateutil.parser import parse
+from setup_credentials import create_credentials_file
 
 # Load environment variables from .env file
 script_dir = Path(__file__).parent
 base_dir = script_dir.parent
 dotenv_path = base_dir / 'env' / 'production.env'
-load_dotenv(dotenv_path=dotenv_path)
+try:
+    if dotenv_path.exists():
+        load_dotenv(dotenv_path=dotenv_path)
+except Exception as e:
+    print(f"Error loading .env file: {e}")
+
+# Create credentials.json from environment variables
+create_credentials_file()
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
@@ -417,4 +425,6 @@ def home():
 
 # --- RUN THE APP ---
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.getenv('PORT', 5000))
+    debug = os.getenv('FLASK_ENV') != 'production'
+    app.run(host='0.0.0.0', port=port, debug=debug)
