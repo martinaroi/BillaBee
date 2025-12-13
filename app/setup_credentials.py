@@ -14,7 +14,7 @@ def create_credentials_file():
     Returns the path to the created file.
     """
     # Get the directory where this script is located
-    from .constants import APP_PATH
+    from constants import APP_PATH
     credentials_path = APP_PATH / "credentials.json"
 
     # Read credentials from environment variables
