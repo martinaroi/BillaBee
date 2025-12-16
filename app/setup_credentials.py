@@ -28,7 +28,7 @@ def create_credentials_file():
             "Missing required environment variables: GOOGLE_CLIENT_ID and/or GOOGLE_CLIENT_SECRET"
         )
     
-    # Create the credentials structure
+    # Create the credentials structure for installed application flow
     credentials = {
         "installed": {
             "client_id": client_id,

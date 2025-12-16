@@ -28,6 +28,9 @@ except Exception as e:
 # Create credentials.json from environment variables
 create_credentials_file()
 
+# Allow OAuth over HTTP for local development
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 CORS(app)
@@ -160,9 +163,9 @@ def get_personal_assistant_response(user_message, user_profile, history=None):
     - {priorities_text}
     - Energy Peaks: {user_profile['energy_peaks']}
     - Anchors: {user_profile['anchors']}
-    - thesis: {user_profile['thesis']}
-    - Wellbeing: {user_profile['wellbeing']}
-    - Preferences: {user_profile['preferences']}
+    - thesis: {user_profile['thesis'] if 'thesis' in user_profile else 'N/A'}
+    - Wellbeing: {user_profile['wellbeing'] if 'wellbeing' in user_profile else 'N/A'}
+    - Preferences: {user_profile['preferences'] if 'preferences' in user_profile else 'N/A'}
 
         --- Core Guidelines ---
     1. Always respect fixed anchors (work, workouts, etc.).
@@ -326,7 +329,7 @@ def summarize_tool_result(tool_name, tool_result):
   
 
 # --- ROUTES ---
-@app.route('/api/select_user', methods=['POST'])
+@app.route('/api/set_user', methods=['POST'])
 def set_user():
     data = request.json
     if data is None:
@@ -337,11 +340,30 @@ def set_user():
     if not username: 
         return jsonify({"status": "error", "message": "Username is required."}), 400
     
-    # Store the selected username in the session
-    session['current_user'] = username
-    print(f"Session user set to: {username}")
-
-    return jsonify({f"User context switched to {username}"})
+    # Check if user profile exists
+    profile_filename = f"user_profile_{username}.json"
+    try:
+        user_profile = load_user_profile(profile_filename)
+        # Store the selected username in the session
+        session['current_user'] = username
+        # Clear chat history when switching users
+        session['chat_history'] = []
+        print(f"Session user set to: {username}")
+        
+        return jsonify({
+            "status": "success",
+            "message": f"User context switched to {username}"
+        })
+    except FileNotFoundError:
+        return jsonify({
+            "status": "error",
+            "message": f"Profile for user '{username}' not found."
+        }), 404
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Error loading user profile: {str(e)}"
+        }), 500
 
 
 @app.route('/api/chat', methods=['POST'])
@@ -421,6 +443,38 @@ def chat_api():
 def home():
     """ Serve the index.html file. """
     return render_template('index.html')
+
+
+@app.route('/google/login', methods=['POST'])
+def google_login():
+    """Trigger Google OAuth flow using installed app flow (opens browser automatically)."""
+    try:
+        success = app_context.calendar_service.authenticate_new_user()
+        if success:
+            return jsonify({
+                "status": "success",
+                "message": "Authentication successful!"
+            })
+        else:
+            return jsonify({
+                "status": "error",
+                "message": "Authentication failed or was cancelled"
+            }), 400
+    except Exception as e:
+        print(f"Error initiating OAuth: {e}")
+        return jsonify({
+            "status": "error",
+            "message": f"Failed to initiate login: {str(e)}"
+        }), 500
+
+
+@app.route('/google/status')
+def google_status():
+    """Check if user is authenticated with Google Calendar."""
+    is_authenticated = app_context.calendar_service.is_authenticated()
+    return jsonify({
+        "authenticated": is_authenticated
+    })
 
 
 # --- RUN THE APP ---

@@ -14,7 +14,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const beeIcons = document.querySelectorAll('.bee-icon');
 
     const userSelect = document.getElementById('user');
-    const selectedUser = userSelect.value;
+
+    // Check authentication status on page load
+    checkAuthStatus();
     /**
      * Creates and adds a message bubble to the chat box.
      * @param {string} text - The message content.
@@ -24,26 +26,33 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Global state variable to hold the events from the AI ---
     let currentEvents = [];   
 
-    // Function to switch user
-    async function switchUser() {
+    // Function to switch user - attached to the select element
+    async function handleUserSwitch() {
+        const selectedUser = userSelect.value;
         console.log("Switching to user:", selectedUser);
 
         try {
             const response = await fetch ('/api/set_user', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user: selectedUser })
+                body: JSON.stringify({ username: selectedUser })
             });
 
             if(response.ok) {
+                const data = await response.json();
                 alert(`Switched to user: ${selectedUser}`);
             } else { 
-                alert("Failed to switch user.");
+                const errorData = await response.json();
+                alert(`Failed to switch user: ${errorData.message || 'Unknown error'}`);
             }
         } catch (error) {
             console.error("Error switching user:", error);
+            alert("Failed to switch user. Please try again.");
         }
     }
+
+    // Attach the event listener to the user select dropdown
+    userSelect.addEventListener('change', handleUserSwitch);
 
     // Function to add a message to the chat box
     function addMessage(text, sender) {
@@ -122,7 +131,7 @@ document.addEventListener('DOMContentLoaded', function() {
         eventsContainer.innerHTML = ''; // Clear old events
 
         try {
-            const response = await fetch('http://127.0.0.1:5000/api/chat', {
+            const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message: message })
@@ -242,7 +251,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 message: messageforAI
             };
 
-            return fetch('http://127.0.0.1:5000/api/chat', {
+            return fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestBody)
@@ -336,4 +345,53 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); chatSend.click()}});
+
+    // Listen for auth success from popup
+    window.addEventListener('message', (event) => {
+        if (event.data.type === 'AUTH_SUCCESS') {
+            checkAuthStatus();
+        }
+    });
 });
+
+// --- Google Authentication Functions ---
+async function checkAuthStatus() {
+    try {
+        const response = await fetch('/google/status');
+        const data = await response.json();
+        
+        const authBanner = document.getElementById('auth-banner');
+        if (!data.authenticated) {
+            authBanner.style.display = 'block';
+        } else {
+            authBanner.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Error checking auth status:', error);
+    }
+}
+
+async function initiateGoogleLogin() {
+    try {
+        // Show loading state
+        const authBanner = document.getElementById('auth-banner');
+        const originalContent = authBanner.innerHTML;
+        authBanner.innerHTML = '<div class="auth-content"><span>🐝 Opening browser for authentication...</span></div>';
+        
+        const response = await fetch('/google/login', { method: 'POST' });
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            // Authentication successful, refresh status
+            checkAuthStatus();
+            alert('Successfully connected to Google Calendar! 🎉');
+        } else {
+            authBanner.innerHTML = originalContent;
+            alert('Failed to authenticate: ' + data.message);
+        }
+    } catch (error) {
+        console.error('Error initiating login:', error);
+        alert('Failed to connect to Google Calendar');
+        checkAuthStatus(); // Restore banner
+    }
+}

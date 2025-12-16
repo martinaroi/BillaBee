@@ -2,39 +2,109 @@ import os.path
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
 import datetime 
 from googleapiclient.errors import HttpError
-from typing import Any
+from typing import Any, Optional
 from zoneinfo import ZoneInfo
+import secrets
 
 
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 
 class GoogleCalendarService:
     def __init__(self, token_path = 'token.json', creds_path='credentials.json'):
-        creds = None
+        self.token_path = token_path
+        self.creds_path = creds_path
+        self.creds = None
+        self.service = None
 
+        # Try to load existing credentials, but don't crash if they don't exist
         if os.path.exists(token_path):
-            creds = Credentials.from_authorized_user_file(token_path, SCOPES)
-        if not creds or not creds.valid: 
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-                with open(token_path, 'w') as token:
-                    token.write(creds.to_json())
-                print('Credentials refreshed.')
+            self.creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+            if self.creds and self.creds.valid:
+                self.service = build('calendar', 'v3', credentials=self.creds)
+                print('Google Calendar Service successfully initialized.')
+            elif self.creds and self.creds.expired and self.creds.refresh_token:
+                try:
+                    self.creds.refresh(Request())
+                    with open(token_path, 'w') as token:
+                        token.write(self.creds.to_json())
+                    self.service = build('calendar', 'v3', credentials=self.creds)
+                    print('Credentials refreshed. Google Calendar Service successfully initialized.')
+                except Exception as e:
+                    print(f'Failed to refresh credentials: {e}')
+                    self.creds = None
+                    self.service = None
             else:
-                raise Exception(f"Fatal Error: Could not load valid Google credentials from {token_path}. "
-                                "Please run the one-time authentication script to generate a valid token.json file.")
+                print('Token exists but is invalid and cannot be refreshed.')
+                self.creds = None
+        else:
+            print('No token.json found. User needs to authenticate via /google/login.')
 
-        self.service = build('calendar', 'v3', credentials=creds)
+    def is_authenticated(self) -> bool:
+        """Check if the service has valid credentials."""
+        return self.service is not None
 
-        print('Google Calendar Service successfully initialized.')
+    def authenticate_new_user(self, port: int = None) -> bool:
+        """Run the OAuth flow for a new user using local server."""
+        if not os.path.exists(self.creds_path):
+            raise Exception(f"Credentials file not found at {self.creds_path}")
+        
+        try:
+            # Use a random port if not specified
+            if port is None:
+                port = 8080 + secrets.randbelow(1000)
+            
+            flow = InstalledAppFlow.from_client_secrets_file(
+                self.creds_path,
+                scopes=SCOPES
+            )
+            
+            # Run local server to handle OAuth callback
+            self.creds = flow.run_local_server(
+                port=port,
+                authorization_prompt_message='Please visit this URL to authorize the application: {url}',
+                success_message='Authentication successful! You can close this window.',
+                open_browser=True
+            )
+            
+            # Save the credentials
+            with open(self.token_path, 'w') as token:
+                token.write(self.creds.to_json())
+            
+            # Initialize the service
+            self.service = build('calendar', 'v3', credentials=self.creds)
+            print('Authentication successful! Token saved and Google Calendar Service initialized.')
+            return True
+            
+        except Exception as e:
+            print(f"Authentication failed: {e}")
+            return False
+
+    def _ensure_valid_credentials(self):
+        """Ensure credentials are valid before making API calls."""
+        if not self.creds:
+            raise Exception("Not authenticated. Please log in via /google/login")
+        
+        if self.creds.expired and self.creds.refresh_token:
+            try:
+                self.creds.refresh(Request())
+                with open(self.token_path, 'w') as token:
+                    token.write(self.creds.to_json())
+                print('Credentials refreshed automatically.')
+            except Exception as e:
+                raise Exception(f"Failed to refresh credentials: {e}")
+        
+        if not self.service:
+            self.service = build('calendar', 'v3', credentials=self.creds)
 
 
     def insert_event(self, event_body: dict[str, Any]):
         """
         Inserts an event into the primary calendar using a pre-validated dictionary.
         """
+        self._ensure_valid_credentials()
 
         try: 
             if 'start' in event_body and 'dateTime' in event_body['start']:
@@ -55,6 +125,8 @@ class GoogleCalendarService:
         """
         Searches for events in the primary calendar matching the given query string.
         """
+        self._ensure_valid_credentials()
+        
         try:
             # Get the ZoneInfo object for Central European Time
             cet_tz = ZoneInfo("Europe/Berlin")
@@ -79,6 +151,8 @@ class GoogleCalendarService:
         """
         Deletes an event in the primary calendar matching the given event id.
         """
+        self._ensure_valid_credentials()
+        
         try:
             self.service.events().delete(calendarId='primary', eventId=event_id).execute()
             print(F"Event deleted: {event_id}")
@@ -91,6 +165,8 @@ class GoogleCalendarService:
         """
         Updates an event if the primary calendar matching the given event id.
         """
+        self._ensure_valid_credentials()
+        
         try:
             event_updates = self.service.events().update(
                 calendarId ='primary', 

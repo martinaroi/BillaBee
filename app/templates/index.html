@@ -19,6 +19,14 @@
 
         <!-- Main content area -->
         <main>
+            <!-- Google Auth Banner (shown when not authenticated) -->
+            <div class="auth-banner" id="auth-banner" style="display: none;">
+                <div class="auth-content">
+                    <span>🐝 Connect your Google Calendar to start scheduling</span>
+                    <button onclick="initiateGoogleLogin()" class="auth-button">Connect Calendar</button>
+                </div>
+            </div>
+
             <!-- This section is visible on page load -->
             <div class="welcome-section" id="welcome-section">
                 <div class="welcome-message">
@@ -28,7 +36,7 @@
 
                 <div class="user-select">
                     <label for="user">Select User:</label>
-                    <select id="user" name="user" onchange="switchUser()">
+                    <select id="user" name="user">
                         <option value="Martina">Martina</option>
                         <option value="Vita">Vita</option>
                         <!-- Add more users here as you create their profiles -->
